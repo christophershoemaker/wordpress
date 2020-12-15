@@ -1,0 +1,161 @@
+---
+- name: Ensure epel is installed
+  yum: name=epel-release state=latest
+
+- name: Ensure pip is installed
+  yum: name=python-pip state=latest
+
+- name: Ensure docker-py is installed
+  pip: name=docker-py
+  
+- name: Create a wordpress network
+  docker_network:
+    name: wordpressnetwork
+    ipam_options:
+      subnet: '172.20.0.0/16'
+      gateway: 172.20.0.1
+
+- name: "Pure directories"
+  file: path="{{ item }}" state=absent
+  with_items:
+    - "{{ wordpress_wp_content }}"
+
+- name: "Ensure directories exists"
+  file: path="{{ item }}" state=directory owner=root group=root mode=2777
+  with_items:
+    - "{{ wordpress_wp_content }}/{{ wordpress_theme_directory }}"
+    - "{{ wordpress_wp_content }}/{{ wordpress_plugin_directory }}"
+    - /opt/wordpress/storage
+    - "{{ php_config }}"
+
+- name: Copy a uploads.ini file
+  copy:
+    src: uploads.ini
+    dest: "{{ php_config }}/{{ php_uploads_config }}"
+    owner: root
+    group: root
+    mode: 2777
+
+- name: Download themes with version numbers
+  get_url:
+    url: "https://downloads.wordpress.org/theme/{{ item.name }}.{{ item.version }}.zip"
+    dest: "/tmp/{{ item.name }}.{{ item.version }}.zip"
+    force: no
+    validate_certs: no
+  with_items: "{{ wordpress_themes }}"
+  when: item.version is defined
+  tags: wordpress
+
+- name: Unpack themes with version numbers
+  unarchive:
+    src: "/tmp/{{ item.name }}.{{ item.version }}.zip"
+    dest: "{{ wordpress_wp_content }}/{{ wordpress_theme_directory }}"
+    creates: "{{ wordpress_wp_content }}/{{ wordpress_theme_directory }}/{{ item.name }}"
+    copy: false
+  with_items: "{{ wordpress_themes }}"
+  when: item.version is defined
+  tags: wordpress
+
+- name: Download themes without version numbers
+  get_url:
+    url: "https://downloads.wordpress.org/theme/{{ item.name }}.zip"
+    dest: "/tmp/{{ item.name }}.zip"
+    force: no
+    validate_certs: no
+  with_items: "{{ wordpress_themes }}"
+  when: item.version is not defined
+  tags: wordpress
+
+- name: Unpack themes without version numbers
+  unarchive:
+    src: "/tmp/{{ item.name }}.zip"
+    dest: "{{ wordpress_wp_content }}/{{ wordpress_theme_directory }}"
+    creates: "{{ wordpress_wp_content }}/{{ wordpress_theme_directory }}/{{ item.name }}"
+    copy: false
+  with_items: "{{ wordpress_themes }}"
+  when: item.version is not defined
+  tags: wordpress
+
+- name: Download plugins with version numbers
+  get_url:
+    url: "https://downloads.wordpress.org/plugin/{{ item.name }}.{{ item.version }}.zip"
+    dest: "/tmp/{{ item.name }}.{{ item.version }}.zip"
+    force: no
+    validate_certs: no
+  with_items: "{{ wordpress_plugins }}"
+  when: item.version is defined
+  tags: wordpress
+
+- name: Unpack plugins with version numbers
+  unarchive:
+    src: "/tmp/{{ item.name }}.{{ item.version }}.zip"
+    dest: "{{ wordpress_wp_content }}/{{ wordpress_plugin_directory }}"
+    creates: "{{ wordpress_wp_content }}/{{ wordpress_plugin_directory }}/{{ item.name }}/"
+    copy: false
+  with_items: "{{ wordpress_plugins }}"
+  when: item.version is defined
+  tags: wordpress
+
+- name: Download plugins without version numbers
+  get_url:
+    url: "https://downloads.wordpress.org/plugin/{{ item.name }}.zip"
+    dest: "/tmp/{{ item.name }}.zip"
+    force: no
+    validate_certs: no
+  with_items: "{{ wordpress_plugins }}"
+  when: item.version is not defined
+  tags: wordpress
+
+- name: Unpack plugins without version numbers
+  unarchive:
+    src: "/tmp/{{ item.name }}.zip"
+    dest: "{{ wordpress_wp_content }}/{{ wordpress_plugin_directory }}"
+    creates: "{{ wordpress_wp_content }}/{{ wordpress_plugin_directory }}/{{ item.name }}/"
+    copy: false
+  with_items: "{{ wordpress_plugins }}"
+  when: item.version is not defined
+  tags: wordpress
+
+- name: Run MySQL docker container
+  docker_container:
+    name: mysql
+    image: "mysql:5.7"
+    state: started
+    ports:
+      - "3306:3306"
+    dns_servers: "8.8.8.8"
+    env:
+      MYSQL_DATABASE: wordpressdb
+      MYSQL_USER: wordpressuser
+      MYSQL_PASSWORD: wordpresspass
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    networks:
+      - name: wordpressnetwork
+        ipv4_address: "172.20.0.100"
+    restart_policy: always
+
+- name: Run Wordpress docker container
+  docker_container:
+    name: wordpress
+    image: "wordpress:latest"
+    state: started
+    ports:
+      - "8080:80"
+    dns_servers: "8.8.8.8"
+    env:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: wordpressuser
+      WORDPRESS_DB_PASSWORD: wordpresspass
+      WORDPRESS_DB_NAME: wordpressdb
+      WORDPRESS_CONFIG_EXTRA: | 
+        define('FS_METHOD', 'direct' );
+        define('WP_DEBUG', true);
+        define('WP_DEBUG_LOG', true);
+    volumes: 
+      - "/opt/wordpress/storage:/opt/wordpress/storage:Z"
+      - "{{ wordpress_wp_content }}:{{ wordpress_wp_content }}:Z"
+      - "{{ php_config }}/{{ php_uploads_config }}:{{ php_config }}/{{ php_uploads_config }}:Z"
+    networks:
+      - name: wordpressnetwork
+        ipv4_address: "172.20.0.101"
+    restart_policy: always

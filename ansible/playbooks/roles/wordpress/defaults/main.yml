@@ -1,0 +1,62 @@
+---
+wordpress_wp_content: /var/www/html/wp-content
+wordpress_theme_directory: themes
+wordpress_plugin_directory: plugins
+
+php_config: /usr/local/etc/php/conf.d
+php_uploads_config: uploads.ini
+
+wordpress_themes:
+  # - name: ashe
+  #   version: 1.8.2
+  # - name: boston
+  #   version: 1.1.2
+  # - name: flymag
+  #   version: 2.0.6
+  # - name: futurio
+  #   version: 1.2.10
+  # - name: generatepress
+  #   version: 2.2.2
+  # - name: hestia
+  #   version: 2.4.2
+  - name: flash
+    version: 1.2.8
+  # - name: mesmerize
+  #   version: 1.6.81
+  # - name: onepress
+  #   version: 2.2.4
+  # - name: polmo-lite
+  #   version: 4.0.0
+  # - name: primer
+  #   version: 1.8.6
+  # - name: shapely
+  #   version: 1.2.4
+  # - name: twentyseventeen
+  #   version: 2.1
+  # - name: zerif-lite
+  #   version: 1.8.5.48
+
+wordpress_plugins:
+  - name: ga-google-analytics
+    version: 20190311
+  - name: google-analytics-for-wordpress
+    version: 7.5.1
+  - name: polylang
+    version: 2.5.3
+  - name: user-registration
+    version: 1.5.10
+  - name: weglot
+    version: 3.0.1
+  - name: wp-sms
+    version: 5.1.4
+  - name: fb-messenger-live-chat
+  - name: mp-timetable
+  - name: wp-live-chat-support
+  - name: wp-user
+  - name: increase-maximum-upload-file-size
+  - name: flash-toolkit
+    version: 1.1.8
+  - name: siteorigin-panels
+    version: 2.10.5
+  - name: themegrill-demo-importer
+    version: 1.5.7

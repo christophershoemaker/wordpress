@@ -1,0 +1,36 @@
+version: '3.3'
+
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: wordpressdb
+      MYSQL_USER: wordpressuser
+      MYSQL_PASSWORD: wordpresspass
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    networks:
+      - wordpress-network
+    dns:
+      - 8.8.8.8
+  wordpress:
+    image: wordpress:latest
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpressuser
+      WORDPRESS_DB_PASSWORD: wordpresspass
+      WORDPRESS_DB_NAME: wordpressdb
+    depends_on:
+      - db
+    networks:
+      - wordpress-network
+    dns:
+      - 8.8.8.8
+networks:
+  wordpress-network:
+    driver: bridge

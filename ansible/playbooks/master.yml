@@ -1,0 +1,7 @@
+---
+- name: Run wordpress environment
+  hosts: localhost
+  remote_user: "vagrant"
+  become: yes
+  roles:
+    - { role: wordpress, tags: wordpress }
